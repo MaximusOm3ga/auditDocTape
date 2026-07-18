@@ -1,2 +1,4 @@
 .env
 Dataset
+*.iml
+*.xml
