@@ -1,3 +1,5 @@
+from extractor import client
+
 def explain_conflict(a: dict, b: dict, doc_a_name: str, doc_b_name: str) -> str:
 
     prompt = f"""Write a 2-3 sentence explanation of this conflict for a human reviewer.

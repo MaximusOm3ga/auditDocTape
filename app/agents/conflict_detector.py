@@ -1,4 +1,5 @@
-from datetime import datetime
+from extractor import client
+import json
 
 def group_claims(claims: list[dict]) -> dict:
 
@@ -34,7 +35,6 @@ def values_conflict(a: dict, b: dict) -> bool:
 
 def severity(a: dict, b: dict) -> float:
 
-    """0-1 score. Weighted by: numeric magnitude of discrepancy, predicate importance, recency."""
 
     base = 0.5
 
