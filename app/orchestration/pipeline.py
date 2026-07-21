@@ -1,65 +1,114 @@
-def process_document(doc_id: str, doc_type: str, entity: str, text: str, db):
+﻿
+from ..database_pg import *
+from ..ingestion.parsers import parse_document
+from ..ingestion.chunker import chunk_text
+from ..embeddings.embedder import embed
+from ..embeddings.chroma_store import ChromaStore
+from ..agents.extractor import extract_claims
+from ..agents.conflict_detector import detect_conflicts, llm_judge_conflict, filter_superseded_pairs
+from ..agents.explainer import explain_conflict
+from typing import Optional, Dict, List
 
+chroma_store = ChromaStore()
+
+def process_document(doc_id: str, doc_type: str, entity: str, text: str) -> Dict:
+    """
+    Process a newly uploaded document through the full pipeline.
+    
+    Steps:
+    1. Chunk the text (respecting structure)
+    2. Store chunks in database
+    3. Embed chunks
+    4. Extract claims with validation
+    5. Store claims in structured database
+    6. Detect conflicts with existing claims
+    7. Selectively judge ambiguous conflicts
+    8. Generate explanations
+    9. Store final conflicts
+    
+    Returns:
+        Summary of processing results
+    """
     chunks = chunk_text(text)
-
     chunk_records = []
-
     for i, ch in enumerate(chunks):
-
         chunk_id = f"{doc_id}_c{i}"
-
-        db.insert_chunk(chunk_id, doc_id, i, ch)
-
+        insert_chunk(chunk_id, doc_id, i, ch)
         chunk_records.append((chunk_id, ch))
-
     vectors = embed([c[1] for c in chunk_records])
-
-    metadatas = [{"doc_id": doc_id, "entity": entity, "doc_type": doc_type,
-
-                  "superseded": False} for _ in chunk_records]
-
+    metadatas = [{
+        "doc_id": doc_id,
+        "entity": entity,
+        "doc_type": doc_type,
+        "superseded": False
+    } for _ in chunk_records]
+    
     chroma_store.add(vectors, [c[0] for c in chunk_records], [c[1] for c in chunk_records], metadatas)
-
-    supersedes_id = db.get_supersedes(doc_id)
-
+    supersedes_id = get_supersedes(doc_id)
     if supersedes_id:
-
         chroma_store.mark_superseded(supersedes_id)
-
     all_claims = []
-
     for chunk_id, ch in chunk_records:
-
         extracted = extract_claims(ch, doc_type)
-
-        for c in extracted:
-
-            c.update({"doc_id": doc_id, "chunk_id": chunk_id, "entity": entity})
-
-            claim_id = db.insert_claim(c)
-
-            c["claim_id"] = claim_id
-
-            all_claims.append(c)
-
-    existing_claims = db.get_claims_for_entity(entity)
-
-    conflicts = detect_conflicts(existing_claims + all_claims)
-
+        for claim in extracted:
+            claim.update({
+                "doc_id": doc_id,
+                "chunk_id": chunk_id,
+                "entity": entity
+            })
+            claim_id = insert_claim(claim)
+            claim["claim_id"] = claim_id
+            all_claims.append(claim)
+    existing_claims = get_claims_for_entity(entity)
+    combined_claims = existing_claims + all_claims
+    supersession_map = {}
+    for claim in combined_claims:
+        doc = get_document(claim["doc_id"])
+        if doc and doc["supersedes_id"]:
+            supersession_map[doc["doc_id"]] = doc["supersedes_id"]
+    
+    conflicts = detect_conflicts(combined_claims, supersession_map)
+    judged_conflicts = []
     for conf in conflicts:
-
         if conf["severity"] > 0.4:
-
-            a, b = db.get_claim(conf["claim_id_a"]), db.get_claim(conf["claim_id_b"])
-
-            judged = llm_judge_conflict(a, b, db.get_chunk_text(a["chunk_id"]), db.get_chunk_text(b["chunk_id"]))
-
-            if not judged["is_genuine_conflict"]:
-
+            claim_a = conf["claim_a"]
+            claim_b = conf["claim_b"]
+            chunk_a_text = get_chunk_text(claim_a["chunk_id"])
+            chunk_b_text = get_chunk_text(claim_b["chunk_id"])
+            
+            judgment = llm_judge_conflict(claim_a, claim_b, chunk_a_text, chunk_b_text)
+            
+            if not judgment.get("is_genuine_conflict", True):
                 continue
+        
+        judged_conflicts.append(conf)
+    stored_conflict_count = 0
+    for conf in judged_conflicts:
+        claim_a = conf["claim_a"]
+        claim_b = conf["claim_b"]
+        doc_a = get_document(claim_a["doc_id"])
+        doc_b = get_document(claim_b["doc_id"])
+        
+        chunk_a_text = get_chunk_text(claim_a["chunk_id"])
+        chunk_b_text = get_chunk_text(claim_b["chunk_id"])
+        
+        explanation = explain_conflict(claim_a, claim_b, doc_a, doc_b, chunk_a_text, chunk_b_text)
+        explanation_json = str(explanation)  # Store as JSON string
+        
+        conflict_id = insert_conflict(
+            claim_a["claim_id"],
+            claim_b["claim_id"],
+            conf["severity"],
+            explanation_json
+        )
+        stored_conflict_count += 1
+    
+    return {
+        "doc_id": doc_id,
+        "chunks_created": len(chunks),
+        "claims_extracted": len(all_claims),
+        "conflicts_detected": len(judged_conflicts),
+        "conflicts_stored": stored_conflict_count
+    }
 
-        explanation = explain_conflict(a, b, db.get_doc_name(a["doc_id"]), db.get_doc_name(b["doc_id"]))
 
-        db.insert_conflict(conf["claim_id_a"], conf["claim_id_b"], conf["severity"], explanation)
-
-    return {"chunks": len(chunks), "claims": len(all_claims), "conflicts": len(conflicts)}

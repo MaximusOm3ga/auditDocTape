@@ -53,3 +53,4 @@ def parse_document(path: str, ext: str) -> str:
         return parse_xlsx(path)
 
     raise ValueError(f"Unsupported extension: {ext}")
+

@@ -1,6 +1,4 @@
-import chromadb
-
-import os
+﻿import chromadb
 
 class ChromaStore:
 
@@ -20,10 +18,6 @@ class ChromaStore:
 
             metadatas: list[dict]):
 
-        """metadatas: one dict per chunk, e.g. {'doc_id': ..., 'entity': ..., 'doc_type': ...,
-
-        'effective_date': ..., 'superseded': False}"""
-
         self.collection.add(
 
             ids=chunk_ids,
@@ -38,9 +32,6 @@ class ChromaStore:
 
     def mark_superseded(self, doc_id: str):
 
-        """Flip a metadata flag rather than deleting — keeps history intact but excludes
-
-        the doc from default retrieval. Chroma supports metadata updates natively."""
 
         results = self.collection.get(where={"doc_id": doc_id})
 
@@ -83,3 +74,4 @@ class ChromaStore:
         )
 
         return list(zip(results["ids"][0], results["distances"][0]))
+

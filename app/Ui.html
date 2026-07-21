@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Doc Tape - Document Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+        
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #764ba2;
+            background: #e8e9ff;
+        }
+        
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-text {
+            color: #666;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .form-group {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        select, input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        
+        select:focus, input[type="text"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .button-primary {
+            background: #667eea;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .button-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+        }
+        
+        .file-item {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        
+        .file-name {
+            flex: 1;
+            color: #333;
+        }
+        
+        .file-size {
+            color: #999;
+            margin: 0 10px;
+        }
+        
+        .remove-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .remove-btn:hover {
+            background: #ee5a52;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-uploading {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        .badge-processing {
+            background: #6bcfff;
+            color: white;
+        }
+        
+        .badge-success {
+            background: #6bcf7f;
+            color: white;
+        }
+        
+        .badge-error {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .conflicts-section {
+            grid-column: 1 / -1;
+        }
+        
+        .conflict-item {
+            background: #fff9f5;
+            border-left: 4px solid #ff6b6b;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .conflict-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .conflict-title {
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        
+        .severity {
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .severity-high {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .severity-medium {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        .severity-low {
+            background: #a8e6cf;
+            color: #333;
+        }
+        
+        .conflict-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .claim-box {
+            background: white;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .claim-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .claim-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .claim-meta {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .explanation {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .explanation-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .explanation-text {
+            font-size: 12px;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .alert {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        
+        .alert-error {
+            background: #ffe0e0;
+            color: #d32f2f;
+            border-left: 3px solid #d32f2f;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 3px solid #2e7d32;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 3px solid #1565c0;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .conflict-details {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Audit Doc Tape</h1>
+            <p class="subtitle">Document & Claims Intelligence System - Upload documents and detect discrepancies</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>Upload Repository</h2>
+                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                    Upload multiple documents that form your reference library.
+                </p>
+                
+                <div class="upload-zone" id="repoUploadZone">
+                    <div class="upload-icon">📂</div>
+                    <div class="upload-text">Drop files here or click to select</div>
+                    <div class="upload-text" style="font-size: 12px; color: #999;">Supported: PDF, DOCX, XLSX, TXT</div>
+                </div>
+                <input type="file" id="repoFileInput" multiple>
+                
+                <div class="form-group">
+                    <label>Document Type</label>
+                    <select id="repoDocType">
+                        <option value="contract">Contract</option>
+                        <option value="financial_report">Financial Report</option>
+                        <option value="policy">Policy</option>
+                        <option value="amendment">Amendment</option>
+                        <option value="invoice">Invoice</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Entity Name</label>
+                    <input type="text" id="repoEntity" placeholder="e.g., Vendor_A, Company_XYZ">
+                </div>
+                
+                <div class="form-group">
+                    <label>Effective Date</label>
+                    <input type="date" id="repoEffectiveDate">
+                </div>
+                
+                <button class="button button-primary" id="uploadRepoBtn" onclick="uploadRepositoryFiles()">
+                    Upload Repository
+                </button>
+                
+                <div class="file-list" id="repoFileList"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Upload Probe File</h2>
+                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                    Upload a document to check against your repository for discrepancies.
+                </p>
+                
+                <div class="upload-zone" id="probeUploadZone">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Drop file here or click to select</div>
+                    <div class="upload-text" style="font-size: 12px; color: #999;">Single file only</div>
+                </div>
+                <input type="file" id="probeFileInput" accept=".pdf,.docx,.xlsx,.txt">
+                
+                <div class="form-group">
+                    <label>Document Type</label>
+                    <select id="probeDocType">
+                        <option value="contract">Contract</option>
+                        <option value="financial_report">Financial Report</option>
+                        <option value="policy">Policy</option>
+                        <option value="amendment">Amendment</option>
+                        <option value="invoice">Invoice</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Entity Name</label>
+                    <input type="text" id="probeEntity" placeholder="e.g., Vendor_A, Company_XYZ">
+                </div>
+                
+                <div class="form-group">
+                    <label>Effective Date</label>
+                    <input type="date" id="probeEffectiveDate">
+                </div>
+                
+                <button class="button button-primary" id="uploadProbeBtn" onclick="uploadProbeFile()">
+                    Check Against Repository
+                </button>
+                
+                <div class="file-list" id="probeFileList"></div>
+            </div>
+        </div>
+        
+        <div class="card conflicts-section">
+            <h2>Detected Conflicts & Discrepancies</h2>
+            <div id="conflictsContainer">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <p>No conflicts detected yet. Upload files to get started.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let repoFiles = [];
+        let probeFile = null;
+        const API_BASE = '';
+
+        const docTypeDescriptions = {
+            contract: 'Legal agreement document',
+            financial_report: 'Financial/accounting document',
+            policy: 'Company or vendor policy',
+            amendment: 'Amendment or addendum',
+            invoice: 'Invoice or billing document'
+        };
+
+        function setupFileHandlers(dropZoneId, inputId, isMultiple = false) {
+            const dropZone = document.getElementById(dropZoneId);
+            const fileInput = document.getElementById(inputId);
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files, isMultiple, inputId);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files, isMultiple, inputId);
+            });
+        }
+
+        function handleFiles(files, isMultiple, inputId) {
+            const listId = inputId.includes('repo') ? 'repoFileList' : 'probeFileList';
+            const isRepo = inputId.includes('repo');
+
+            if (isMultiple) {
+                repoFiles = Array.from(files);
+                renderFileList(repoFiles, listId, true);
+            } else {
+                probeFile = files[0];
+                renderFileList([probeFile], listId, false);
+            }
+        }
+
+        function renderFileList(files, listId, canRemove) {
+            const container = document.getElementById(listId);
+            if (files.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = files.map((file, idx) => `
+                <div class="file-item">
+                    <span class="file-name">📁 ${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    ${canRemove ? `<button class="remove-btn" onclick="removeFile(${idx})">Remove</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function removeFile(index) {
+            repoFiles.splice(index, 1);
+            renderFileList(repoFiles, 'repoFileList', true);
+        }
+
+        async function uploadRepositoryFiles() {
+            if (repoFiles.length === 0) {
+                showAlert('Please select at least one file', 'error');
+                return;
+            }
+
+            const docType = document.getElementById('repoDocType').value;
+            const entity = document.getElementById('repoEntity').value;
+            const effectiveDate = document.getElementById('repoEffectiveDate').value;
+
+            if (!entity.trim()) {
+                showAlert('Please enter an entity name', 'error');
+                return;
+            }
+
+            if (!effectiveDate) {
+                showAlert('Please select an effective date', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('uploadRepoBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Uploading...';
+
+            try {
+                for (const file of repoFiles) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('doc_type', docType);
+                    formData.append('entity', entity);
+                    formData.append('effective_date', effectiveDate);
+
+                    const response = await fetch(`${API_BASE}/documents/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.status !== 'success') {
+                        throw new Error(data.message || 'Upload failed');
+                    }
+                }
+
+                showAlert(`Successfully uploaded ${repoFiles.length} file(s) to repository!`, 'success');
+                repoFiles = [];
+                renderFileList([], 'repoFileList', true);
+                document.getElementById('repoFileInput').value = '';
+                
+            } catch (error) {
+                showAlert(`Error uploading files: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Upload Repository';
+            }
+        }
+
+        async function uploadProbeFile() {
+            if (!probeFile) {
+                showAlert('Please select a file to check', 'error');
+                return;
+            }
+
+            const docType = document.getElementById('probeDocType').value;
+            const entity = document.getElementById('probeEntity').value;
+            const effectiveDate = document.getElementById('probeEffectiveDate').value;
+
+            if (!entity.trim()) {
+                showAlert('Please enter an entity name', 'error');
+                return;
+            }
+
+            if (!effectiveDate) {
+                showAlert('Please select an effective date', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('uploadProbeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Checking...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', probeFile);
+                formData.append('doc_type', docType);
+                formData.append('entity', entity);
+                formData.append('effective_date', effectiveDate);
+
+                const response = await fetch(`${API_BASE}/documents/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.status !== 'success') {
+                    throw new Error(data.message || 'Upload failed');
+                }
+
+                await loadConflicts();
+                showAlert('File checked! Conflicts loaded below.', 'success');
+                
+            } catch (error) {
+                showAlert(`Error checking file: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Check Against Repository';
+            }
+        }
+
+        async function loadConflicts() {
+            try {
+                const response = await fetch(`${API_BASE}/conflicts?min_severity=0.0`);
+                const data = await response.json();
+
+                if (data.status !== 'success') {
+                    throw new Error(data.message || 'Failed to load conflicts');
+                }
+
+                const container = document.getElementById('conflictsContainer');
+                
+                if (data.conflicts.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">✓</div>
+                            <p>No conflicts detected! All documents are consistent.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.conflicts.map(conflict => {
+                    const claimA = conflict.claim_a;
+                    const claimB = conflict.claim_b;
+                    const severity = conflict.severity;
+                    
+                    let severityClass = 'severity-low';
+                    if (severity >= 0.7) severityClass = 'severity-high';
+                    else if (severity >= 0.4) severityClass = 'severity-medium';
+
+                    return `
+                        <div class="conflict-item">
+                            <div class="conflict-header">
+                                <div class="conflict-title">
+                                    ${claimA.predicate ? claimA.predicate.replace(/_/g, ' ') : 'Claim'} Mismatch
+                                </div>
+                                <span class="severity ${severityClass}">${Math.round(severity * 100)}% Severity</span>
+                            </div>
+                            
+                            <div class="conflict-details">
+                                <div class="claim-box">
+                                    <div class="claim-label">Document A</div>
+                                    <div class="claim-value">${claimA.value || 'N/A'}</div>
+                                    <div class="claim-meta">
+                                        <strong>${claimA.document.filename}</strong><br>
+                                        Type: ${claimA.document.doc_type}<br>
+                                        Date: ${claimA.document.effective_date || 'N/A'}<br>
+                                        Confidence: ${claimA.confidence ? (claimA.confidence * 100).toFixed(0) + '%' : 'N/A'}
+                                    </div>
+                                </div>
+                                
+                                <div class="claim-box">
+                                    <div class="claim-label">Document B</div>
+                                    <div class="claim-value">${claimB.value || 'N/A'}</div>
+                                    <div class="claim-meta">
+                                        <strong>${claimB.document.filename}</strong><br>
+                                        Type: ${claimB.document.doc_type}<br>
+                                        Date: ${claimB.document.effective_date || 'N/A'}<br>
+                                        Confidence: ${claimB.confidence ? (claimB.confidence * 100).toFixed(0) + '%' : 'N/A'}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${conflict.explanation && conflict.explanation.reasoning ? `
+                                <div class="explanation">
+                                    <div class="explanation-label">Analysis</div>
+                                    <div class="explanation-text">${conflict.explanation.reasoning}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Error loading conflicts:', error);
+                showAlert(`Error loading conflicts: ${error.message}`, 'error');
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const container = document.querySelector('.main-content');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.insertBefore(alert, container.firstChild);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        window.addEventListener('load', () => {
+            setupFileHandlers('repoUploadZone', 'repoFileInput', true);
+            setupFileHandlers('probeUploadZone', 'probeFileInput', false);
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('repoEffectiveDate').value = today;
+            document.getElementById('probeEffectiveDate').value = today;
+            
+            loadConflicts();
+        });
+    </script>
+</body>
+</html>
