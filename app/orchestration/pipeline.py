@@ -1,5 +1,4 @@
-﻿
-from ..database_pg import *
+﻿from ..database_pg import *
 from ..ingestion.parsers import parse_document
 from ..ingestion.chunker import chunk_text
 from ..embeddings.embedder import embed
@@ -8,32 +7,15 @@ from ..agents.extractor import extract_claims
 from ..agents.conflict_detector import detect_conflicts, llm_judge_conflict, filter_superseded_pairs
 from ..agents.explainer import explain_conflict
 from typing import Optional, Dict, List
+import json
 
 chroma_store = ChromaStore()
 
 def process_document(doc_id: str, doc_type: str, entity: str, text: str) -> Dict:
-    """
-    Process a newly uploaded document through the full pipeline.
-    
-    Steps:
-    1. Chunk the text (respecting structure)
-    2. Store chunks in database
-    3. Embed chunks
-    4. Extract claims with validation
-    5. Store claims in structured database
-    6. Detect conflicts with existing claims
-    7. Selectively judge ambiguous conflicts
-    8. Generate explanations
-    9. Store final conflicts
-    
-    Returns:
-        Summary of processing results
-    """
     chunks = chunk_text(text)
     chunk_records = []
     for i, ch in enumerate(chunks):
-        chunk_id = f"{doc_id}_c{i}"
-        insert_chunk(chunk_id, doc_id, i, ch)
+        chunk_id = insert_chunk(doc_id, i, ch)
         chunk_records.append((chunk_id, ch))
     vectors = embed([c[1] for c in chunk_records])
     metadatas = [{
@@ -93,7 +75,7 @@ def process_document(doc_id: str, doc_type: str, entity: str, text: str) -> Dict
         chunk_b_text = get_chunk_text(claim_b["chunk_id"])
         
         explanation = explain_conflict(claim_a, claim_b, doc_a, doc_b, chunk_a_text, chunk_b_text)
-        explanation_json = str(explanation)  # Store as JSON string
+        explanation_json = json.dump(explanation)
         
         conflict_id = insert_conflict(
             claim_a["claim_id"],

@@ -12,7 +12,6 @@ def print_header(title):
     print(f"{'='*70}\n")
 
 def check_postgresql():
-    """Check if PostgreSQL is installed and running."""
     print_header("Checking PostgreSQL Installation")
     
     try:
@@ -32,7 +31,6 @@ def check_postgresql():
         return False
 
 def check_python_deps():
-    """Check if required Python packages are installed."""
     print_header("Checking Python Dependencies")
     
     required = ["psycopg2"]

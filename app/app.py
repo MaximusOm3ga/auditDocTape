@@ -26,17 +26,16 @@ async def upload_document(
 ):
 
     try:
-       doc_id = str(uuid.uuid4())
-       ext = file.filename.split(".")[-1].lower()
-       path = f"./data/uploads/{doc_id}.{ext}"
-       with open(path, "wb") as f:
-           shutil.copyfileobj(file.file, f)
-       text = parse_document(path, ext)
-       supersedes_id = None
-       insert_document(file.filename, doc_type, entity, effective_date, supersedes_id)
-       result = process_document(doc_id, doc_type, entity, text)
+        ext = file.filename.split(".")[-1].lower()
+        path = f"./data/uploads/{uuid.uuid4()}.{ext}"
+        with open(path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        text = parse_document(path, ext)
+
+        doc_id = insert_document(file.filename, doc_type, entity, effective_date, supersedes)
+        result = process_document(doc_id, doc_type, entity, text)
         
-       return {
+        return {
            "status": "success",
            "doc_id": doc_id,
            "processing": result
