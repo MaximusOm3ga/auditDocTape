@@ -1,9 +1,4 @@
-﻿"""
-Database configuration.
-Manages connection settings for PostgreSQL.
-"""
-
-import os
+﻿import os
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -18,7 +13,6 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_POOL_MIN = int(os.environ.get("DB_POOL_MIN", 2))
 DB_POOL_MAX = int(os.environ.get("DB_POOL_MAX", 10))
 def get_connection_string() -> str:
-    """Generate PostgreSQL connection string."""
     if DB_PASSWORD:
         return f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     else:

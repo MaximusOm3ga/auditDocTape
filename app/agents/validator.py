@@ -7,7 +7,15 @@ ALLOWED_PREDICATES = {
         "renewal_date",
         "termination_notice_days",
         "liability_cap",
-        "governing_law"
+        "governing_law",
+        "initial_term_months",
+        "auto_renewal_period_months",
+        "invoice_due_days",
+        "availability_uptime_pct",
+        "confidentiality_period_years",
+        "business_hours",
+        "hourly_rate",
+        "rush_surcharge_pct",
     ],
     "financial_report": [
         "revenue",
