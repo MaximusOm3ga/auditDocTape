@@ -14,15 +14,6 @@ class NumericVerificationError(Exception):
 
 
 def parse_number(value_str: str) -> Tuple[float, Optional[str]]:
-    """
-    Parse a number value, potentially with currency or unit.
-    
-    Returns: (number, currency_if_found)
-    Examples:
-        "$1,234.56" -> (1234.56, "USD")
-        "1234.56 EUR" -> (1234.56, "EUR")
-        "30 days" -> (30, None)
-    """
     value_str = str(value_str).strip()
     currency = None
     if "$" in value_str:

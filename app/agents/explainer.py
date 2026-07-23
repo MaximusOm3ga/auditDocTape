@@ -14,21 +14,6 @@ else:
 
 def explain_conflict(claim_a: dict, claim_b: dict, doc_a_info: dict, doc_b_info: dict,
                     chunk_a_text: str, chunk_b_text: str) -> dict:
-    """
-    Generate a citation-grounded explanation of a conflict.
-    
-    Args:
-        claim_a, claim_b: The conflicting claims
-        doc_a_info, doc_b_info: Document metadata (filename, effective_date, etc)
-        chunk_a_text, chunk_b_text: Full context chunks the claims came from
-        
-    Returns:
-        A dict with structured explanation including:
-        - summary: brief statement of the conflict
-        - explanation: full explanation of the discrepancy
-        - possible_reasons: list of reasons (time period, currency, etc)
-        - citations: exact traces back to source documents
-    """
     prompt = f"""You are analyzing a document conflict for a human reviewer.
 
 Two documents contain claims that appear to conflict:
@@ -115,7 +100,6 @@ Return ONLY valid JSON with this structure:
 
 
 def format_explanation_for_api(explanation: dict) -> dict:
-    """Format explanation for API response."""
     return {
         "summary": explanation["summary"],
         "claim_a": explanation["claim_a"],
