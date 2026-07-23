@@ -49,19 +49,18 @@ class ChromaStore:
 
                doc_type: str | None = None, include_superseded: bool = False):
 
-        where = {}
-
+        conditions = []
         if entity:
-
-            where["entity"] = entity
-
+            conditions.append({"entity": entity})
         if doc_type:
-
-            where["doc_type"] = doc_type
-
+            conditions.append({"doc_type": doc_type})
         if not include_superseded:
-
-            where["superseded"] = False
+            conditions.append({"superseded": False})
+        where = (
+            {"$and": conditions}
+            if len(conditions) > 1
+            else (conditions[0] if conditions else None)
+        )
 
         results = self.collection.query(
 

@@ -2,6 +2,9 @@
 import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from ..agents.verifier import numeric_conflict_analysis, NumericVerificationError
+
+
 
 def group_claims(claims: list[dict]) -> dict:
 
@@ -16,22 +19,14 @@ def group_claims(claims: list[dict]) -> dict:
     return groups
 
 def values_conflict(a: dict, b: dict) -> bool:
-
     if a["value_type"] != b["value_type"]:
-
         return False
-
-    if a["value_type"] == "number" or a["value_type"] == "currency":
-
+    if a["value_type"] in ("number", "currency"):
         try:
-
-            va, vb = float(a["value"].replace(",", "")), float(b["value"].replace(",", ""))
-
-        except ValueError:
-
+            result = numeric_conflict_analysis(a, b, tolerance_percent=1.0)
+        except NumericVerificationError:
             return a["value"] != b["value"]
-        return abs(va - vb) / max(abs(va), abs(vb), 1) > 0.01
-
+        return result.get("is_significant", False)
     return a["value"].strip().lower() != b["value"].strip().lower()
 
 def severity(a: dict, b: dict) -> float:

@@ -75,7 +75,7 @@ def process_document(doc_id: str, doc_type: str, entity: str, text: str) -> Dict
         chunk_b_text = get_chunk_text(claim_b["chunk_id"])
         
         explanation = explain_conflict(claim_a, claim_b, doc_a, doc_b, chunk_a_text, chunk_b_text)
-        explanation_json = json.dump(explanation)
+        explanation_json = json.dumps(explanation)
         
         conflict_id = insert_conflict(
             claim_a["claim_id"],

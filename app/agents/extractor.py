@@ -70,6 +70,8 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
 
         temperature=0,
 
+        max_tokens=1024,
+
     )
 
     raw = resp.choices[0].message.content.strip()
@@ -88,6 +90,8 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
             messages=[{"role": "user", "content": repair_prompt}],
 
             temperature=0,
+
+            max_tokens = 1024,
 
         )
 
