@@ -64,13 +64,13 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
 
     resp = client.chat.completions.create(
 
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
 
         messages=[{"role": "user", "content": prompt}],
 
         temperature=0,
 
-        max_tokens=1024,
+        #max_tokens=1024,
 
     )
 
@@ -85,13 +85,13 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
 
         resp2 = client.chat.completions.create(
 
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
 
             messages=[{"role": "user", "content": repair_prompt}],
 
             temperature=0,
 
-            max_tokens = 1024,
+            #max_tokens = 1024,
 
         )
 

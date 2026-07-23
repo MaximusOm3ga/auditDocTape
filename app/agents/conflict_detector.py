@@ -138,7 +138,7 @@ def llm_judge_conflict(a: dict, b: dict, chunk_a_text: str, chunk_b_text: str) -
 
     resp = client.chat.completions.create(
 
-        model="llama-3.1-8b-instant",
+        model="openao/gpt-oss-20b",
 
         messages=[{"role": "user", "content": prompt}],
 
