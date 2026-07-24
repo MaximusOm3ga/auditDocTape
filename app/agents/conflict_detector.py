@@ -6,16 +6,32 @@ from ..agents.verifier import numeric_conflict_analysis, NumericVerificationErro
 
 
 
+def normalize_predicate(pred: str) -> str:
+    mapping = {
+        "payment_terms": "payment_terms_days",
+        "payment_terms_days": "payment_terms_days",
+        "invoice_due_period": "payment_terms_days",
+        "invoice_due_days": "payment_terms_days",
+        "term": "initial_term_months",
+        "initial_term": "initial_term_months",
+        "contract_term": "initial_term_months",
+        "liability": "liability_cap",
+        "liability_cap": "liability_cap",
+        "liability_limit": "liability_cap",
+        "governing_law": "governing_law",
+        "jurisdiction": "governing_law",
+        "applicable_law": "governing_law",
+    }
+    return mapping.get(pred.strip().lower(), pred.strip().lower())
+
 def group_claims(claims: list[dict]) -> dict:
-
     groups = {}
-
     for c in claims:
-
-        key = (c["entity"], c["subject"], c["predicate"])
-
+        entity = (c.get("entity") or "").strip().lower()
+        subject = (c.get("subject") or "").strip().lower().replace(" ", "_")
+        predicate = normalize_predicate(c.get("predicate") or "")
+        key = (entity, subject, predicate)
         groups.setdefault(key, []).append(c)
-
     return groups
 
 def values_conflict(a: dict, b: dict) -> bool:
