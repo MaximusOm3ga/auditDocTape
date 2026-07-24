@@ -26,10 +26,15 @@ def normalize_predicate(pred: str) -> str:
 
 def group_claims(claims: list[dict]) -> dict:
     groups = {}
+    seen = set()
     for c in claims:
         entity = (c.get("entity") or "").strip().lower()
         subject = (c.get("subject") or "").strip().lower().replace(" ", "_")
         predicate = normalize_predicate(c.get("predicate") or "")
+        dedup_key = (c.get("doc_id"), entity, subject, predicate, str(c.get("value")).strip().lower())
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
         key = (entity, subject, predicate)
         groups.setdefault(key, []).append(c)
     return groups
@@ -211,6 +216,8 @@ def llm_judge_conflict(a: dict, b: dict, chunk_a_text: str, chunk_b_text: str) -
         model="openai/gpt-oss-20b",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
+        max_tokens = 2048,
+        reasoning_effort = "low",
     )
 
     try:
