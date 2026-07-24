@@ -100,72 +100,125 @@ def filter_superseded_pairs(conflicts: List[Dict], supersession_map: Dict[str, O
     
     return filtered
 
-def detect_conflicts(claims: list[dict], supersession_map: Optional[Dict[str, Optional[str]]] = None) -> list[dict]:
+# def detect_conflicts(claims: list[dict], supersession_map: Optional[Dict[str, Optional[str]]] = None) -> list[dict]:
+#     if supersession_map is None:
+#         supersession_map = {}
+# 
+#     conflicts = []
+# 
+#     for key, group in group_claims(claims).items():
+# 
+#         for i in range(len(group)):
+# 
+#             for j in range(i + 1, len(group)):
+# 
+#                 a, b = group[i], group[j]
+# 
+#                 if a["doc_id"] == b["doc_id"]:
+# 
+#                     continue
+# 
+#                 if values_conflict(a, b):
+# 
+#                     conflicts.append({
+#                         "claim_id_a": a.get("claim_id"),
+#                         "claim_id_b": b.get("claim_id"),
+#                         "claim_a": a,
+#                         "claim_b": b,
+#                         "severity": severity(a, b),
+#                     })
+#     conflicts = filter_superseded_pairs(conflicts, supersession_map)
+#     
+#     return conflicts
+
+#DEBUGGER
+
+def detect_conflicts(
+    claims: list[dict], supersession_map: Optional[Dict[str, Optional[str]]] = None
+) -> list[dict]:
     if supersession_map is None:
         supersession_map = {}
 
+    print(f"\n[DEBUG] detect_conflicts called with {len(claims)} total claims")
+    groups = group_claims(claims)
+    print(f"[DEBUG] Grouped into {len(groups)} groups")
+    for key, group in groups.items():
+        print(
+            f"[DEBUG]  Group {key}: {len(group)} claims from docs: {[c['doc_id'][:8] for c in group]}"
+        )
+
     conflicts = []
-
-    for key, group in group_claims(claims).items():
-
+    for key, group in groups.items():
         for i in range(len(group)):
-
             for j in range(i + 1, len(group)):
-
                 a, b = group[i], group[j]
-
                 if a["doc_id"] == b["doc_id"]:
-
                     continue
+                print(
+                    f"[DEBUG]  CROSS-DOC COMPARE: {a['predicate']} | A='{a['value']}' vs B='{b['value']}' (types: {a['value_type']}/{b['value_type']})"
+                )
+                vc = values_conflict(a, b)
+                print(f"[DEBUG]   values_conflict={vc}, severity={severity(a, b)}")
+                if vc:
+                    conflicts.append(
+                        {
+                            "claim_id_a": a.get("claim_id"),
+                            "claim_id_b": b.get("claim_id"),
+                            "claim_a": a,
+                            "claim_b": b,
+                            "severity": severity(a, b),
+                        }
+                    )
 
-                if values_conflict(a, b):
-
-                    conflicts.append({
-                        "claim_id_a": a.get("claim_id"),
-                        "claim_id_b": b.get("claim_id"),
-                        "claim_a": a,
-                        "claim_b": b,
-                        "severity": severity(a, b),
-                    })
+    print(f"[DEBUG] Raw conflicts before filter: {len(conflicts)}")
     conflicts = filter_superseded_pairs(conflicts, supersession_map)
-    
+    print(f"[DEBUG] After supersession filter: {len(conflicts)}")
     return conflicts
 
 def llm_judge_conflict(a: dict, b: dict, chunk_a_text: str, chunk_b_text: str) -> dict:
 
-    prompt = f"""Two claims appear to conflict. Determine if this is a genuine contradiction
-    or if it's explainable by different scope (different time period, region, currency, contract line item, etc).
-    
-    Claim A (from document dated {a.get('effective_date', 'unknown')}): 
-    Subject: {a['subject']}
-    Predicate: {a['predicate']}
-    Value: {a['value']} {a.get('unit', '')}
-    Context: {chunk_a_text[:500]}
-    
-    Claim B (from document dated {b.get('effective_date', 'unknown')}): 
-    Subject: {b['subject']}
-    Predicate: {b['predicate']}
-    Value: {b['value']} {b.get('unit', '')}
-    Context: {chunk_b_text[:500]}
-    
-    Respond with ONLY this JSON format, no other text:
-    {{"is_genuine_conflict": true/false, "reasoning": "one sentence explaining why"}}
-    """
+    prompt = f"""You are a contract compliance auditor reviewing documents for the same business entity.
+            
+            Two documents for the same entity contain different values for the same contractual term.
+            Your job is to determine whether this difference is MATERIAL and should be flagged for human review.
+            
+            A difference is MATERIAL if:
+            - The same entity is bound by contradictory obligations (e.g., different payment amounts, different termination periods, different governing laws)
+            - One document imposes stricter or different terms than the other without clear justification
+            - A reasonable person would need to know about this discrepancy to manage legal or business risk
+            
+            A difference is NOT material ONLY if:
+            - The claims are about completely unrelated topics or different subsidiaries
+            - One document explicitly states it supersedes or amends the other
+            
+            Document A ({a.get("doc_type", "unknown")} dated {a.get("effective_date", "unknown")}):
+            Subject: {a["subject"]}
+            Term: {a["predicate"]}
+            Value: {a["value"]} {a.get("unit", "")}
+            Context: {chunk_a_text[:500]}
+            
+            Document B ({b.get("doc_type", "unknown")} dated {b.get("effective_date", "unknown")}):
+            Subject: {b["subject"]}
+            Term: {b["predicate"]}
+            Value: {b["value"]} {b.get("unit", "")}
+            Context: {chunk_b_text[:500]}
+            
+            Respond with ONLY this JSON format, no other text:
+            {{"is_material_discrepancy": true/false, "reasoning": "one sentence explaining why"}}
+            """
 
     resp = client.chat.completions.create(
-
         model="openai/gpt-oss-20b",
-
         messages=[{"role": "user", "content": prompt}],
-
         temperature=0,
-
     )
 
     try:
         result = json.loads(resp.choices[0].message.content.strip())
     except json.JSONDecodeError:
-        result = {"is_genuine_conflict": True, "reasoning": "Failed to parse LLM response"}
-    
-    return result
+        result = {
+            "is_material_discrepancy": True,
+            "reasoning": "Failed to parse LLM response",
+        }
 
+    return result

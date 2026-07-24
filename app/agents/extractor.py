@@ -64,13 +64,15 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
 
     resp = client.chat.completions.create(
 
-        model="openai/gpt-oss-20b",
+        model = "openai/gpt-oss-20b",
 
-        messages=[{"role": "user", "content": prompt}],
+        messages = [{"role": "user", "content": prompt}],
 
-        temperature=0,
+        temperature = 0,
 
-        #max_tokens=1024,
+        max_tokens = 2048,
+
+        reasoning_effort = "low",
 
     )
 
@@ -91,7 +93,9 @@ def extract_claims(chunk_text: str, doc_type: str) -> list[dict]:
 
             temperature=0,
 
-            #max_tokens = 1024,
+            max_tokens = 2048,
+
+            reasoning_effort = "low"
 
         )
 
